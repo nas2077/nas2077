@@ -25,4 +25,4 @@ The N signature identifies the author. Orbi is the orange ringed mascot, with a 
 
 Dark and light themes use the same semantic roles. Keyboard focus remains visible. Reduced motion freezes decorative animation. A quiet preset keeps movement restrained; expressive and off options are also available.
 
-The original kit is being prepared for its own repository. This page describes the visual system; it is not a published component package.
+Explore the [live component catalog](https://nas2077.github.io/nas-design-system/) or use the [source kit](https://github.com/nas2077/nas-design-system).
