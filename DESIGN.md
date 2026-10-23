@@ -25,4 +25,10 @@ The N signature identifies the author. Orbi is the orange ringed mascot, with a 
 
 Dark and light themes use the same semantic roles. Keyboard focus remains visible. Reduced motion freezes decorative animation. A quiet preset keeps movement restrained; expressive and off options are also available.
 
-Explore the [live component catalog](https://nas2077.github.io/nas-design-system/) or use the [source kit](https://github.com/nas2077/nas-design-system).
+## Project icons
+
+Every project is an element of one periodic table: a 32 x 32 pixel tile with its
+release number, a two-letter symbol and the color of its category (app, game,
+site, design, animation, study). Small sizes use a 16 x 16 badge with the symbol
+only. The tiles are drawn by [`tools/element.py`](tools/element.py) from
+[`elements.json`](elements.json).
