@@ -1,8 +1,7 @@
 {
-  "about": "The periodic table of Nas. Number = order of public release. Symbol = two letters of the project. Category = the color. Tiles are drawn by tools/element.py.",
+  "about": "The periodic table of Nas. Number = order of public release. Symbol = two letters of the project. Family = the block of the table it sits in: product (s), client (d), experiment (p), design (f). Drawn by tools/periodic.py.",
   "elements": [
-    {"number": 1, "symbol": "Tt", "name": "TikTok Transcriber", "category": "app",
-     "repository": "https://github.com/nas2077/tiktok-transcriber"}
-  ],
-  "classified": ["game", "site", "app", "animation", "game", "design", "site"]
+    {"number": 1, "symbol": "Tt", "name": "TikTok Transcriber", "family": "product", "year": 2026,
+     "platforms": "Windows · macOS · Linux", "repository": "https://github.com/nas2077/tiktok-transcriber"}
+  ]
 }

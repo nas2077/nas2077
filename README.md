@@ -12,11 +12,11 @@ I make software that runs **on your computer**, not on someone else's: no accoun
 <a href="https://github.com/nas2077/tiktok-transcriber">
   <picture>
     <source media="(prefers-color-scheme: light)" srcset="assets/table-light.svg">
-    <img src="assets/table-dark.svg" alt="The periodic table of Nas: element 01 is TikTok Transcriber; the other projects are still classified." width="960">
+    <img src="assets/table-dark.svg" alt="The periodic table of Nas: its four blocks are products, client work, experiments, and design and study. Element 01 is TikTok Transcriber, a product." width="960">
   </picture>
 </a>
 
-Every project gets an element: a number (the order it was released), two letters, and a color for what it is. Planets run out. Elements don't.
+Every project gets an element: a number (the order it shipped), two letters, and a place in one of the four blocks of the table. Products sit on the left, client work in the middle, experiments on the right, design and study at the bottom. Planets run out. Elements don't.
 
 | | Element | What it does |
 |---|---|---|
