@@ -27,8 +27,11 @@ Dark and light themes use the same semantic roles. Keyboard focus remains visibl
 
 ## Project icons
 
-Every project is an element of one periodic table: a 32 x 32 pixel tile with its
-release number, a two-letter symbol and the color of its category (app, game,
-site, design, animation, study). Small sizes use a 16 x 16 badge with the symbol
-only. The tiles are drawn by [`tools/element.py`](tools/element.py) from
-[`elements.json`](elements.json).
+Every project is an element of one periodic table, drawn in the shape of the
+real one. Its four blocks are the four families of work: products (s-block,
+orange), client work (d-block, blue), experiments (p-block, green), and design
+and study (f-block, purple). An element is a filled square in its family's
+color with the release number in the corner and a two-letter symbol in Barlow
+Bold; empty cells keep the outline of their block. The table and the element
+icons are drawn by [`tools/periodic.py`](tools/periodic.py) from
+[`elements.json`](elements.json), with the lettering turned into paths.

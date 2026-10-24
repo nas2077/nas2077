@@ -1,8 +1,10 @@
 """Build the animated profile artwork: the header with Orbi and the periodic table.
 
-    python tools/build_profile.py <folder with orbi.json, orbi-scuro.png, orbi-chiaro.png>
+    python tools/build_profile.py [folder with orbi.json, orbi-scuro.png, orbi-chiaro.png]
 
-Needs Pillow. Writes assets/header-{dark,light}.svg and assets/table-{dark,light}.svg.
+Needs Pillow and fontTools. Writes assets/table-{dark,light}.svg and one
+assets/element-NN.svg per element; with the Orbi folder, also
+assets/header-{dark,light}.svg.
 Everything is plain SVG with CSS animation, so GitHub shows it as an image;
 readers who ask for reduced motion get a still picture.
 """
@@ -17,6 +19,7 @@ from PIL import Image
 
 sys.path.insert(0, str(Path(__file__).resolve().parent))
 import element  # noqa: E402
+import periodic  # noqa: E402
 
 ROOT = Path(__file__).resolve().parent.parent
 ASSETS = ROOT / "assets"
@@ -164,93 +167,17 @@ def header(sprite_dir, theme, meta):
             f"{orbi}</svg>\n")
 
 
-# ------------------------------------------------------------------ periodic table
-
-
-def locked_tile(category):
-    canvas = [["." for _ in range(32)] for _ in range(32)]
-    for yy in range(32):
-        for xx in range(32):
-            canvas[yy][xx] = "k" if (yy in (0, 31) or xx in (0, 31)) else "n"
-    for xx, yy in ((0, 0), (31, 0), (0, 31), (31, 31)):
-        canvas[yy][xx] = "."
-    question = EXTRA["?"].split()
-    for i in range(2):
-        for gy, row in enumerate(question):
-            for gx, c in enumerate(row):
-                if c == "#":
-                    for dy in range(2):
-                        for dx in range(2):
-                            canvas[10 + gy * 2 + dy][5 + i * 12 + gx * 2 + dx] = "c"
-    for xx in range(4, 28, 2):
-        canvas[27][xx] = "k"
-    return ["".join(r) for r in canvas]
-
-
-def tile_svg(grid, category, theme, x, y, scale, cls="", dim=False):
-    pal = element.palette(category, light=(theme == "light"))
-    colors = {"k": f'fill="#{pal["k"]}"', "n": f'fill="#{pal["n"]}"',
-              "c": f'fill="#{pal["k"] if dim else pal["c"]}"'}
-    return (f'<g class="{cls}" transform="translate({x} {y}) scale({scale})" shape-rendering="crispEdges">'
-            + element.rects(grid, colors) + "</g>")
-
-
-def table(theme):
-    t = THEMES[theme]
-    W, H = 960, 330
-    title, _ = pixel_text("the periodic table of Nas", 40, 34, 3, t["text"])
-    parts, captions = [], []
-    published = [e for e in ELEMENTS["elements"]]
-    locked = ELEMENTS["classified"]
-    slots = published + [{"locked": True, "category": c} for c in locked]
-    size, gap = 96, 14
-    x0, y0 = 40, 92
-    for i, item in enumerate(slots):
-        x = x0 + i * (size + gap)
-        if item.get("locked"):
-            parts.append(tile_svg(locked_tile(item["category"]), item["category"], theme, x, y0, 3,
-                                  cls=f"locked l{i % 4}", dim=True))
-            captions.append(f'<text class="cap dim" x="{x + size / 2}" y="{y0 + size + 22}">classified</text>')
-        else:
-            grid = element.tile(item["number"], item["symbol"], item["category"])
-            parts.append(f'<rect class="glow" x="{x - 5}" y="{y0 - 5}" width="{size + 10}" height="{size + 10}" rx="6" '
-                         f'fill="none" stroke="#{element.CATEGORIES[item["category"]]}" stroke-width="3"/>')
-            parts.append(tile_svg(grid, item["category"], theme, x, y0, 3))
-            words = item["name"].split(" ", 1)
-            for n, word in enumerate(words):
-                captions.append(f'<text class="cap" x="{x + size / 2}" y="{y0 + size + 22 + n * 16}">{word}</text>')
-    legend, lx = [], 40
-    for name, color in element.CATEGORIES.items():
-        legend.append(f'<rect x="{lx}" y="{H - 52}" width="14" height="14" fill="#{color}"/>'
-                      f'<text class="leg" x="{lx + 22}" y="{H - 40}">{name}</text>')
-        lx += 36 + len(name) * 10
-    css = (f".cap{{font:600 13px {FONT};fill:{t['text']};text-anchor:middle}}.dim{{fill:{t['soft']};opacity:.7}}"
-           f".leg{{font:14px {FONT};fill:{t['soft']}}}.sub{{font:15px {FONT};fill:{t['soft']}}}"
-           f".glow{{animation:glow 2.6s ease-in-out infinite}}@keyframes glow{{0%,100%{{opacity:.15}}50%{{opacity:.9}}}}"
-           f".locked{{opacity:.55;animation:flicker 7s steps(1,end) infinite}}"
-           f".l1{{animation-delay:-2s}}.l2{{animation-delay:-4.5s}}.l3{{animation-delay:-6s}}"
-           f"@keyframes flicker{{0%,100%{{opacity:.55}}91%{{opacity:.55}}92%{{opacity:.9}}93%{{opacity:.4}}94%{{opacity:.8}}95%{{opacity:.55}}}}"
-           + STILL)
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" '
-            f'aria-label="The periodic table of Nas: element 01 is TikTok Transcriber; the other projects are still classified.">'
-            f"<title>The periodic table of Nas</title><style>{css}</style>"
-            f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>'
-            f'<g shape-rendering="crispEdges">{title}</g>'
-            f'<text class="sub" x="40" y="74">one element per project · number = order of release · color = what it is</text>'
-            f'{"".join(parts)}{"".join(captions)}{"".join(legend)}</svg>\n')
-
-
 def main():
-    sprite_dir = Path(sys.argv[1])
-    meta = json.loads((sprite_dir / "orbi.json").read_text(encoding="utf-8"))
     ASSETS.mkdir(exist_ok=True)
-    for theme in THEMES:
-        (ASSETS / f"header-{theme}.svg").write_text(header(sprite_dir, theme, meta), encoding="utf-8")
-        (ASSETS / f"table-{theme}.svg").write_text(table(theme), encoding="utf-8")
+    if len(sys.argv) > 1:
+        sprite_dir = Path(sys.argv[1])
+        meta = json.loads((sprite_dir / "orbi.json").read_text(encoding="utf-8"))
+        for theme in THEMES:
+            (ASSETS / f"header-{theme}.svg").write_text(header(sprite_dir, theme, meta), encoding="utf-8")
+    for theme in periodic.THEMES:
+        (ASSETS / f"table-{theme}.svg").write_text(periodic.table(theme, ELEMENTS["elements"]), encoding="utf-8")
     for e in ELEMENTS["elements"]:
-        grid = element.tile(e["number"], e["symbol"], e["category"])
-        (ASSETS / f"element-{e['number']:02d}.svg").write_text(
-            element.svg(grid, e["category"], e["name"], size=96), encoding="utf-8")
+        (ASSETS / f"element-{e['number']:02d}.svg").write_text(periodic.tile(e), encoding="utf-8")
     for path in sorted(ASSETS.glob("*.svg")):
         print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB")
 
