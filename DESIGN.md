@@ -28,10 +28,15 @@ Dark and light themes use the same semantic roles. Keyboard focus remains visibl
 ## Project icons
 
 Every project is an element of one periodic table, drawn in the shape of the
-real one. Its four blocks are the four families of work: products (s-block,
-orange), client work (d-block, blue), experiments (p-block, green), and design
-and study (f-block, purple). An element is a filled square in its family's
-color with the release number in the corner and a two-letter symbol in Barlow
-Bold; empty cells keep the outline of their block. The table and the element
-icons are drawn by [`tools/periodic.py`](tools/periodic.py) from
-[`elements.json`](elements.json), with the lettering turned into paths.
+real one. Its four blocks are the four families of work: products (s-block),
+client work (d-block), experiments (p-block), and design and study (f-block).
+The table uses only the six colors: a family is told by its place in the table
+(the legend shows each block on a miniature of it), never by a hue of its own.
+
+Surfaces follow the components. Empty cells are recessed, like fields waiting
+for input. An element is a raised square with its release number in the corner
+and a two-letter symbol in Inter; the newest one is rust, because the table
+links to it. Orange stays in the pixel art: the loading bar of the lab and a
+16 px Orbi at 2x. The table and the element icons are drawn by
+[`tools/periodic.py`](tools/periodic.py) from [`elements.json`](elements.json),
+with the lettering turned into paths.
