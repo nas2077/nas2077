@@ -1,4 +1,4 @@
-"""The periodic table of Nas, drawn smooth: every project is an element.
+"""The periodic table of Nas, drawn in pixels like the header: every project is an element.
 
 The table has the shape of the real one, and its four blocks are the four
 families of work. The number is the order of release, the two letters are the
@@ -9,91 +9,106 @@ project's symbol, the block (and its color) is the kind of work:
     p-block  Experiments     side projects for fun
     f-block  Design & study  systems, identity, notes
 
-Lettering is Barlow (SIL Open Font License, tools/fonts), turned into SVG paths
-so GitHub shows it exactly: an SVG used as an image cannot load fonts.
+It uses the same pieces as the header (tools/build_profile.py): the Nas 5 x 7
+pixel letters and 3 x 5 digits from tools/element.py, the system monospace
+font for running text, square pixel corners, and twinkling stars in the empty
+parts of the table. Everything sits on a 2 px grid.
 
-    tile(element, size)    -> one element as a standalone SVG
+    tile(element)          -> one element as a standalone pixel SVG
     table(theme, elements) -> the whole table, animated, for the profile README
-
-Needs fontTools.
 """
-from pathlib import Path
+import random
 
-from fontTools.pens.svgPathPen import SVGPathPen
-from fontTools.ttLib import TTFont
+from element import DIGITS, LETTERS
 
-FONTS = Path(__file__).resolve().parent / "fonts"
-WEIGHTS = {400: "Regular", 500: "Medium", 600: "SemiBold", 700: "Bold"}
 INK = "#1B2632"
+FONT = "ui-monospace,SFMono-Regular,Menlo,Consolas,monospace"
+EXTRA = {",": "..... ..... ..... ..... ..##. ..##. .##..", "'": "..#.. ..#.. .#... ..... ..... ..... .....",
+         " ": "..... ..... ..... ..... ..... ..... .....", ".": "..... ..... ..... ..... ..... ..##. ..##.",
+         "p": "..... ..... ####. #...# #...# ####. #...."}   # a taller bowl reads better at title size
 
 # key: (name, singular, block, color, what it holds)
 FAMILIES = {
-    "product": ("Products", "Product", "s", "FFB162", "Apps you can download."),
-    "client": ("Client work", "Client work", "d", "8FB8E8", "Sites for real clients."),
-    "experiment": ("Experiments", "Experiment", "p", "7FC8A9", "Side projects for fun."),
-    "design": ("Design & study", "Design", "f", "C59BE0", "Systems, identity, notes."),
+    "product": ("products", "product", "s", "FFB162", "apps you can download."),
+    "client": ("client work", "client", "d", "8FB8E8", "sites for real clients."),
+    "experiment": ("experiments", "experiment", "p", "7FC8A9", "side projects for fun."),
+    "design": ("design & study", "design", "f", "C59BE0", "systems, identity, notes."),
 }
 THEMES = {
-    "dark": {"bg": "#1B2632", "text": "#EEE9DF", "soft": "#C9C1B1", "rule": "rgba(238,233,223,0.12)",
-             "empty": "rgba(238,233,223,0.02)", "edge": 0.30, "tint": 0.16, "deep": 1.0},
-    "light": {"bg": "#EEE9DF", "text": "#1B2632", "soft": "#2C3B4D", "rule": "rgba(27,38,50,0.14)",
-              "empty": "rgba(255,255,255,0.35)", "edge": 0.45, "tint": 0.26, "deep": 0.72},
+    "dark": {"bg": "#1B2632", "text": "#EEE9DF", "soft": "#C9C1B1", "star": "#EEE9DF", "accent": "#FFB162",
+             "rule": "rgba(238,233,223,0.14)", "empty": "rgba(238,233,223,0.03)",
+             "edge": 0.34, "tint": 0.20, "deep": 1.0},
+    "light": {"bg": "#EEE9DF", "text": "#1B2632", "soft": "#2C3B4D", "star": "#A35139", "accent": "#A35139",
+              "rule": "rgba(27,38,50,0.16)", "empty": "rgba(255,255,255,0.40)",
+              "edge": 0.55, "tint": 0.30, "deep": 0.72},
 }
 STILL = "@media (prefers-reduced-motion: reduce){*{animation:none!important}}"
-_fonts = {}
-_used = set()
 
 
-# ------------------------------------------------------------------ lettering
+# ------------------------------------------------------------------ pixels
 
 
-def _font(weight):
-    if weight not in _fonts:
-        font = TTFont(FONTS / f"Barlow-{WEIGHTS[weight]}.ttf")
-        _fonts[weight] = (font.getGlyphSet(), font.getBestCmap(), font["head"].unitsPerEm)
-    return _fonts[weight]
-
-
-def width(text, size, weight=400):
-    glyphs, cmap, upem = _font(weight)
-    return sum(glyphs[cmap[ord(c)]].width for c in text) * size / upem
-
-
-def text(value, x, y, size, weight=400, anchor="start", **attrs):
-    """value as glyph outlines; x, y is the baseline point, anchor start, middle or end.
-    Each glyph is drawn once in <defs> (see _defs) and placed with <use>."""
-    glyphs, cmap, upem = _font(weight)
-    if anchor == "middle":
-        x -= width(value, size, weight) / 2
-    elif anchor == "end":
-        x -= width(value, size, weight)
-    uses, cursor = [], 0
-    for c in value:
-        name = cmap[ord(c)]
-        if c != " ":
-            _used.add((weight, name))
-            uses.append(f'<use href="#{_glyph_id(weight, name)}" x="{cursor}"/>')
-        cursor += glyphs[name].width
-    scale = size / upem
-    extra = "".join(f' {k.replace("_", "-")}="{v}"' for k, v in attrs.items())
-    return (f'<g transform="translate({x:.2f} {y:.2f}) scale({scale:.5f} {-scale:.5f})"{extra}>'
-            f'{"".join(uses)}</g>')
-
-
-def _glyph_id(weight, name):
-    return f"g{weight}-{''.join(c if c.isalnum() else '_' for c in name)}"
-
-
-def _defs():
-    """the outlines of every glyph used since the last call, in font units"""
+def _runs(glyph, x, y, scale, width):
+    """a glyph ('#' and '.', rows split by spaces) as merged horizontal runs"""
     out = []
-    for weight, name in sorted(_used):
-        glyphs = _font(weight)[0]
-        pen = SVGPathPen(glyphs, ntos=lambda v: str(round(v)))
-        glyphs[name].draw(pen)
-        out.append(f'<path id="{_glyph_id(weight, name)}" d="{pen.getCommands()}"/>')
-    _used.clear()
-    return f'<defs>{"".join(out)}</defs>'
+    for gy, row in enumerate(glyph.split()):
+        gx = 0
+        while gx < width:
+            if row[gx] == "#":
+                end = gx
+                while end < width and row[end] == "#":
+                    end += 1
+                out.append(f"M{x + gx * scale} {y + gy * scale}h{(end - gx) * scale}v{scale}h{-(end - gx) * scale}z")
+                gx = end
+            else:
+                gx += 1
+    return out
+
+
+def pixel_text(value, x, y, scale, fill, **attrs):
+    """value in the Nas 5 x 7 letters, top-left at x, y; returns (svg, right edge)"""
+    d, cursor = [], x
+    for ch in value:
+        d += _runs(EXTRA.get(ch) or LETTERS[ch], cursor, y, scale, 5)
+        cursor += 6 * scale
+    extra = "".join(f' {k.replace("_", "-")}="{v}"' for k, v in attrs.items())
+    return f'<path d="{"".join(d)}" fill="{fill}"{extra}/>', cursor - scale
+
+
+def pixel_digits(value, x, y, scale, fill):
+    """value in the Nas 3 x 5 digits, top-left at x, y"""
+    d = []
+    for i, ch in enumerate(value):
+        d += _runs(DIGITS[ch], x + i * 4 * scale, y, scale, 3)
+    return f'<path d="{"".join(d)}" fill="{fill}"/>'
+
+
+def digits_width(value, scale):
+    return (len(value) * 4 - 1) * scale
+
+
+def letters_width(value, scale):
+    return (len(value) * 6 - 1) * scale
+
+
+def notched(x, y, w, h, n=2):
+    """a square with its corner pixels taken off, the pixel way of rounding"""
+    return f"M{x + n} {y}h{w - 2 * n}v{n}h{n}v{h - 2 * n}h{-n}v{n}h{-(w - 2 * n)}v{-n}h{-n}v{-(h - 2 * n)}h{n}z"
+
+
+def frame(x, y, w, h, t=2):
+    """a t px outline with open corners, as one path"""
+    return (f"M{x + t} {y}h{w - 2 * t}v{t}h{-(w - 2 * t)}z"
+            f"M{x + t} {y + h - t}h{w - 2 * t}v{t}h{-(w - 2 * t)}z"
+            f"M{x} {y + t}h{t}v{h - 2 * t}h{-t}z"
+            f"M{x + w - t} {y + t}h{t}v{h - 2 * t}h{-t}z")
+
+
+def mono(value, x, y, size, fill, weight=400, anchor="start", cls=None):
+    value = value.replace("&", "&amp;")
+    extra = f' class="{cls}"' if cls else ""
+    return (f'<text x="{x}" y="{y}" font-family="{FONT}" font-size="{size}" font-weight="{weight}" '
+            f'fill="{fill}" text-anchor="{anchor}"{extra}>{value}</text>')
 
 
 def _rgba(color, alpha, deep=1.0):
@@ -104,42 +119,48 @@ def _rgba(color, alpha, deep=1.0):
 # ------------------------------------------------------------------ one element
 
 
-def _element(e, x, y, size, detail=False):
-    """the filled square: number, symbol, and with detail the family and name"""
+def _cell(e, x, y, size):
+    """an element in the table: number in the corner, symbol in the middle"""
+    fill = f'#{FAMILIES[e["family"]][3]}'
+    sx = x + (size - letters_width(e["symbol"], 2)) // 2
+    symbol, _ = pixel_text(e["symbol"], sx, y + 24, 2, INK)
+    return (f'<path d="{notched(x, y, size, size)}" fill="{fill}"/>'
+            + pixel_digits(f'{e["number"]:02d}', x + 4, y + 4, 2, INK) + symbol)
+
+
+def _card(e, x, y, size):
+    """the latest element up close: number, family, a big symbol, name and platforms"""
     family = FAMILIES[e["family"]]
-    fill = f"#{family[3]}"
-    parts = [f'<rect x="{x}" y="{y}" width="{size}" height="{size}" rx="{size * 0.085:.1f}" fill="{fill}"/>']
-    if detail:
-        pad = size * 0.085
-        parts.append(text(f'{e["number"]:02d}', x + pad, y + pad + 9, 11, 700, fill=INK))
-        parts.append(text(family[1], x + size - pad, y + pad + 9, 11, 600, "end", fill=INK))
-        parts.append(text(e["symbol"], x + size / 2, y + size * 0.62, size * 0.44, 700, "middle", fill=INK))
-        parts.append(text(e["name"], x + size / 2, y + size * 0.80, 12.5, 600, "middle", fill=INK))
-        if e.get("platforms"):
-            parts.append(text(e["platforms"], x + size / 2, y + size * 0.91, 10.5, 500, "middle", fill=INK))
-    else:
-        parts.append(text(f'{e["number"]:02d}', x + size * 0.1, y + size * 0.24, size * 0.17, 700, fill=INK))
-        parts.append(text(e["symbol"], x + size / 2, y + size * 0.71, size * 0.44, 700, "middle", fill=INK))
+    sx = x + (size - letters_width(e["symbol"], 7)) // 2
+    symbol, _ = pixel_text(e["symbol"], sx, y + 36, 7, INK)
+    parts = [f'<path d="{notched(x, y, size, size, 4)}" fill="#{family[3]}"/>',
+             pixel_digits(f'{e["number"]:02d}', x + 8, y + 8, 3, INK),
+             mono(family[1], x + size - 8, y + 19, 11, INK, 700, "end"),
+             symbol,
+             mono(e["name"], x + size / 2, y + 112, 12, INK, 700, "middle")]
+    if e.get("platforms"):
+        parts.append(mono(e["platforms"], x + size / 2, y + 130, 9.5, INK, 400, "middle"))
     return "".join(parts)
 
 
 def tile(e, size=96):
-    """a standalone SVG of one element, the same in both themes"""
+    """a standalone pixel SVG of one element on a 24 x 24 grid, the same in both themes"""
     label = f'{e["number"]:02d} {e["symbol"]}: {e["name"]}'
-    body = _element(e, 0, 0, 96)
-    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" width="{size}" height="{size}" '
-            f'role="img" aria-label="{label}"><title>{label}</title>{_defs()}{body}</svg>\n')
+    symbol, _ = pixel_text(e["symbol"], (24 - letters_width(e["symbol"], 1)) // 2, 12, 1, INK)
+    body = (f'<path d="{notched(0, 0, 24, 24, 1)}" fill="#{FAMILIES[e["family"]][3]}"/>'
+            + pixel_digits(f'{e["number"]:02d}', 2, 2, 1, INK) + symbol)
+    return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="{size}" height="{size}" '
+            f'shape-rendering="crispEdges" role="img" aria-label="{label}"><title>{label}</title>{body}</svg>\n')
 
 
 # ------------------------------------------------------------------ the table
 
-W, H = 960, 656
-PAD, GAP, CELL, TOP = 40, 5, 44, 128
-COL = (W - 2 * PAD - 17 * GAP) / 18
+W, H = 960, 720
+PAD, GAP, CELL, TOP = 32, 4, 46, 176   # 18 * 46 + 17 * 4 = 896 = W - 2 * PAD
 
 
 def _x(col):
-    return PAD + (col - 1) * (COL + GAP)
+    return PAD + (col - 1) * (CELL + GAP)
 
 
 def _y(row):
@@ -174,64 +195,92 @@ def _places(elements):
     return places
 
 
+def _stars(t, taken):
+    """the header's twinkling stars, only where nothing else is drawn"""
+    rng = random.Random(77)
+    out = []
+    for _ in range(400):
+        sx, sy = rng.randrange(6, W - 10) // 2 * 2, rng.randrange(6, H - 10) // 2 * 2
+        size = rng.choice((2, 2, 2, 4))
+        if any(x0 - 8 < sx + size and sx < x1 + 8 and y0 - 8 < sy + size and sy < y1 + 8
+               for x0, y0, x1, y1 in taken):
+            continue
+        taken.append((sx, sy, sx + size, sy + size))
+        out.append(f'<rect class="star" x="{sx}" y="{sy}" width="{size}" height="{size}" '
+                   f'style="animation-duration:{rng.uniform(2.2, 5.5):.1f}s;animation-delay:-{rng.uniform(0, 5):.1f}s"/>')
+        if len(out) == 38:
+            break
+    return "".join(out)
+
+
 def table(theme, elements):
     t = THEMES[theme]
     places = _places(elements)
     latest = max(elements, key=lambda e: e["number"])
     blocks = {f[2]: f[3] for f in FAMILIES.values()}
-    css = [f".cell{{stroke-width:1;fill:{t['empty']};animation:8s ease-in-out infinite}}",
-           ".glow{animation:glow 3.2s ease-in-out infinite}@keyframes glow{0%,100%{opacity:.12}50%{opacity:.7}}"]
+    css = [f".star{{fill:{t['star']};animation:twinkle 4s ease-in-out infinite}}"
+           "@keyframes twinkle{0%,100%{opacity:.15}50%{opacity:.9}}",
+           f".cell{{fill:{t['empty']};animation:8s steps(4,end) infinite}}",
+           ".blink{animation:blink 1.6s steps(1,end) infinite}@keyframes blink{0%{opacity:1}50%{opacity:0}}",
+           f".shoot{{stroke:{t['accent']};stroke-width:3;stroke-linecap:square;opacity:0;animation:shoot 13s linear infinite}}"
+           "@keyframes shoot{0%,82%{opacity:0;transform:translate(0,0)}84%{opacity:1}92%{opacity:0;transform:translate(-200px,90px)}100%{opacity:0}}"]
     for block, color in blocks.items():
-        css.append(f".b{block}{{stroke:{_rgba(color, t['edge'], t['deep'])};animation-name:w{block}}}"
+        css.append(f".e{block}{{fill:{_rgba(color, t['edge'], t['deep'])}}}"
+                   f".b{block}{{animation-name:w{block}}}"
                    f"@keyframes w{block}{{0%,30%,100%{{fill:{t['empty']}}}15%{{fill:{_rgba(color, t['tint'])}}}}}")
 
-    out = [text("The periodic table of Nas.", PAD, 74, 36, 700, fill=t["text"]),
-           text("Every project is an element. The number is the order it shipped, the block is the kind of work.",
-                PAD, 102, 15, 500, fill=t["soft"])]
-    right = W - PAD
-    for value, label in ((min(e.get("year", 9999) for e in elements), "since"), (len(FAMILIES), "families"),
-                         (len(elements), "shipped")):
-        out.append(text(str(value), right, 72, 22, 600, "end", fill=t["text"]))
-        out.append(text(label, right, 90, 11, 400, "end", fill=t["soft"]))
-        right -= max(width(str(value), 22, 600), width(label, 11)) + 28
+    # the title, set like "hi, i'm Nas." in the header
+    words, end = pixel_text("the periodic table of ", 40, 40, 5, t["text"])
+    nas, end = pixel_text("Nas", end + 5, 40, 5, t["accent"])
+    dot, end = pixel_text(".", end, 40, 5, t["text"])
+    years = min(e.get("year", 9999) for e in elements)
+    out = [f'<g shape-rendering="crispEdges">{words}{nas}{dot}</g>',
+           mono("every project is an element. the number is the order it shipped.", 42, 112, 17, t["text"], 600),
+           mono(f"{len(elements)} shipped · {len(FAMILIES)} families · since {years} · the block is the kind of work",
+                42, 140, 14, t["soft"])]
+    taken = [(36, 36, end, 80), (40, 94, 740, 146)]
 
+    pixels = []
     for col, row, block in _cells():
         x, y = _x(col), _y(row)
+        taken.append((x, y, x + CELL, y + CELL))
         e = places.get((col, row))
         if e is None:
             delay = (col + row) * 0.16
-            out.append(f'<rect class="cell b{block}" x="{x + .5:.2f}" y="{y + .5}" width="{COL - 1:.2f}" '
-                       f'height="{CELL - 1}" rx="6" style="animation-delay:{delay:.2f}s"/>')
+            pixels.append(f'<rect class="cell b{block}" x="{x + 2}" y="{y + 2}" width="{CELL - 4}" '
+                          f'height="{CELL - 4}" style="animation-delay:{delay:.2f}s"/>'
+                          f'<path class="e{block}" d="{frame(x, y, CELL, CELL)}"/>')
             continue
         if e is latest:
-            out.append(f'<rect class="glow" x="{x - 3:.2f}" y="{y - 3}" width="{COL + 6:.2f}" height="{CELL + 6}" '
-                       f'rx="8" fill="none" stroke="#{FAMILIES[e["family"]][3]}" stroke-width="3"/>')
-        fill = f'#{FAMILIES[e["family"]][3]}'
-        out.append(f'<rect x="{x:.2f}" y="{y}" width="{COL:.2f}" height="{CELL}" rx="6" fill="{fill}"/>')
-        out.append(text(f'{e["number"]:02d}', x + 4, y + 10, 7.5, 700, fill=INK))
-        out.append(text(e["symbol"], x + COL / 2, y + 31, 19, 700, "middle", fill=INK))
+            pixels.append(f'<path class="blink" fill="#{FAMILIES[e["family"]][3]}" '
+                          f'd="{frame(x - 4, y - 4, CELL + 8, CELL + 8)}"/>')
+        pixels.append(_cell(e, x, y, CELL))
 
     # the empty space at the top of the real table: the latest element up close, and the families
     size = 3 * CELL + 2 * GAP
-    ix, iy = _x(3) + 12, _y(1)
-    out.append(_element(latest, ix, iy, size, detail=True))
-    x0, x1 = ix + size + 22, _x(13) - 14
-    colw = (x1 - x0 - 18) / 2
+    ix, iy = _x(3) + 14, _y(1)
+    pixels.append(_card(latest, ix, iy, size))
+    x0, x1 = ix + size + 22, _x(13) - 16
+    taken.append((ix, iy, x1, iy + size))
     for i, (name, _, block, color, about) in enumerate(FAMILIES.values()):
-        x, y = x0 + (i % 2) * (colw + 18), iy + 6 + (i // 2) * 72
-        out.append(f'<line x1="{x:.2f}" y1="{y}" x2="{x + colw:.2f}" y2="{y}" stroke="{t["rule"]}"/>')
-        out.append(f'<rect x="{x:.2f}" y="{y + 12}" width="9" height="9" rx="2" fill="#{color}"/>')
-        out.append(text(name, x + 15, y + 21, 13, 600, fill=t["text"]))
-        out.append(text(f"{block}-block", x + colw, y + 21, 10.5, 500, "end", fill=t["soft"]))
-        out.append(text(about, x, y + 40, 11.5, 400, fill=t["soft"]))
+        y = iy + i * 37
+        pixels.append(f'<rect x="{x0}" y="{y}" width="{x1 - x0}" height="2" fill="{t["rule"]}"/>')
+        pixels.append(f'<path d="{notched(x0, y + 8, 10, 10)}" fill="#{color}"/>')
+        out.append(mono(name, x0 + 18, y + 18, 13, t["text"], 700))
+        out.append(mono(f"{block}-block", x1, y + 18, 11, t["soft"], 400, "end"))
+        out.append(mono(about, x0 + 18, y + 32, 11, t["soft"]))
 
-    out.append(f'<line x1="{PAD}" y1="602" x2="{W - PAD}" y2="602" stroke="{t["rule"]}"/>')
-    out.append(text("Empty cells are projects still in the lab.", PAD, 626, 12.5, 400, fill=t["soft"]))
-    out.append(text("Planets run out. Elements don't.", W - PAD, 626, 12.5, 400, "end", fill=t["soft"]))
+    rule = _y(10) + CELL + 18
+    pixels.append(f'<rect x="{PAD}" y="{rule}" width="{W - 2 * PAD}" height="2" fill="{t["rule"]}"/>')
+    out.append(mono("empty cells are projects still in the lab.", PAD, rule + 26, 13, t["soft"]))
+    out.append(mono("planets run out. elements don't.", W - PAD, rule + 26, 13, t["soft"], 400, "end"))
+    taken.append((PAD, rule, W - PAD, H))
 
     shipped = ", ".join(f'{e["number"]:02d} {e["name"]}' for e in sorted(elements, key=lambda e: e["number"]))
     label = (f"The periodic table of Nas. Its four blocks are the families of work: products, client work, "
              f"experiments, design and study. Shipped: {shipped}.")
     return (f'<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 {W} {H}" width="{W}" height="{H}" role="img" '
             f'aria-label="{label}"><title>The periodic table of Nas</title><style>{"".join(css)}{STILL}</style>'
-            f'{_defs()}<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>{"".join(out)}</svg>\n')
+            f'<rect width="{W}" height="{H}" rx="18" fill="{t["bg"]}"/>{_stars(t, taken)}'
+            f'<line class="shoot" x1="900" y1="20" x2="940" y2="2"/>'
+            f'<g shape-rendering="crispEdges">{"".join(pixels)}</g>{"".join(out)}</svg>\n')
