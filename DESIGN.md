@@ -28,10 +28,12 @@ Dark and light themes use the same semantic roles. Keyboard focus remains visibl
 ## Project icons
 
 Every project is an element of one periodic table, drawn in the shape of the
-real one. Its four blocks are the four families of work: products (s-block,
-orange), client work (d-block, blue), experiments (p-block, green), and design
-and study (f-block, purple). An element is a filled square in its family's
-color with the release number in the corner and a two-letter symbol in Barlow
-Bold; empty cells keep the outline of their block. The table and the element
-icons are drawn by [`tools/periodic.py`](tools/periodic.py) from
-[`elements.json`](elements.json), with the lettering turned into paths.
+real one, in the same pixel style as the header: the Nas 5 x 7 pixel letters,
+monospace text, square pixel corners and twinkling stars. Its four blocks are
+the four families of work: products (s-block, orange), client work (d-block,
+blue), experiments (p-block, green), and design and study (f-block, purple).
+An element is a filled pixel square in its family's color with the release
+number in 3 x 5 pixel digits and a two-letter symbol in pixel letters; empty
+cells keep a 2 px outline of their block. The table and the element icons are
+drawn by [`tools/periodic.py`](tools/periodic.py) from
+[`elements.json`](elements.json).

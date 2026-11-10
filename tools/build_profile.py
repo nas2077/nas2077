@@ -2,7 +2,7 @@
 
     python tools/build_profile.py [folder with orbi.json, orbi-scuro.png, orbi-chiaro.png]
 
-Needs Pillow and fontTools. Writes assets/table-{dark,light}.svg and one
+Needs Pillow. Writes assets/table-{dark,light}.svg and one
 assets/element-NN.svg per element; with the Orbi folder, also
 assets/header-{dark,light}.svg.
 Everything is plain SVG with CSS animation, so GitHub shows it as an image;
