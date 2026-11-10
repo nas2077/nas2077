@@ -11,8 +11,8 @@ I make software that runs **on your computer**, not on someone else's: no accoun
 
 <a href="https://github.com/nas2077/tiktok-transcriber">
   <picture>
-    <source media="(prefers-color-scheme: light)" srcset="assets/table-light.svg">
-    <img src="assets/table-dark.svg" alt="The periodic table of Nas: its four blocks are products, client work, experiments, and design and study. Element 01 is TikTok Transcriber, a product." width="960">
+    <source media="(prefers-color-scheme: light)" srcset="assets/periodic-light.svg">
+    <img src="assets/periodic-dark.svg" alt="The periodic table of Nas: its four blocks are products, client work, experiments, and design and study. Element 01 is TikTok Transcriber, a product." width="960">
   </picture>
 </a>
 
@@ -20,7 +20,7 @@ Every project gets an element: a number (the order it shipped), two letters, and
 
 | | Element | What it does |
 |---|---|---|
-| <img src="assets/element-01.svg" width="48" height="48" alt="Tt"> | **[01 · TikTok Transcriber](https://github.com/nas2077/tiktok-transcriber)** | Paste a public TikTok link, get readable transcripts. Recognition runs locally with Qwen and Whisper. Windows, macOS and Linux, in 14 languages. |
+| <img src="assets/elements/01.svg" width="48" height="48" alt="Tt"> | **[01 · TikTok Transcriber](https://github.com/nas2077/tiktok-transcriber)** | Paste a public TikTok link, get readable transcripts. Recognition runs locally with Qwen and Whisper. Windows, macOS and Linux, in 14 languages. |
 | 🔒 | **02 · ???** | Classified. Orbi knows. Orbi isn't telling. |
 
 ## Status report
