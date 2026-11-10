@@ -2,8 +2,8 @@
 
     python tools/build_profile.py [folder with orbi.json, orbi-scuro.png, orbi-chiaro.png]
 
-Needs Pillow. Writes assets/table-{dark,light}.svg and one
-assets/element-NN.svg per element; with the Orbi folder, also
+Needs Pillow. Writes assets/periodic-{dark,light}.svg and one
+assets/elements/NN.svg per element; with the Orbi folder, also
 assets/header-{dark,light}.svg.
 Everything is plain SVG with CSS animation, so GitHub shows it as an image;
 readers who ask for reduced motion get a still picture.
@@ -168,16 +168,16 @@ def header(sprite_dir, theme, meta):
 
 
 def main():
-    ASSETS.mkdir(exist_ok=True)
+    (ASSETS / "elements").mkdir(parents=True, exist_ok=True)
     if len(sys.argv) > 1:
         sprite_dir = Path(sys.argv[1])
         meta = json.loads((sprite_dir / "orbi.json").read_text(encoding="utf-8"))
         for theme in THEMES:
             (ASSETS / f"header-{theme}.svg").write_text(header(sprite_dir, theme, meta), encoding="utf-8")
     for theme in periodic.THEMES:
-        (ASSETS / f"table-{theme}.svg").write_text(periodic.table(theme, ELEMENTS["elements"]), encoding="utf-8")
+        (ASSETS / f"periodic-{theme}.svg").write_text(periodic.table(theme, ELEMENTS["elements"]), encoding="utf-8")
     for e in ELEMENTS["elements"]:
-        (ASSETS / f"element-{e['number']:02d}.svg").write_text(periodic.tile(e), encoding="utf-8")
+        (ASSETS / "elements" / f"{e['number']:02d}.svg").write_text(periodic.tile(e), encoding="utf-8")
     for path in sorted(ASSETS.glob("*.svg")):
         print(f"{path.name}: {path.stat().st_size / 1024:.0f} KB")
 
